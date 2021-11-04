@@ -231,10 +231,18 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
             let affix = affixes.choose(&mut rng).unwrap();
             if affix.starts_with("+") && prefixed {
                 word.insert(0, affix.to_owned().replace("+", ""));
+                // add a syllable marker
+                word.insert(1, "•".to_owned());
             }
         } else if suffixed {
-            // choose a random affix or none
+            // choose a random suffix or none
             let affix = affixes.choose(&mut rng).unwrap();
+            // make sure there's a syllable marker
+            if word[word.len() - 1] != "•" {
+                word.push("•".to_owned());
+            }
+
+            // add the affix
             if affix.starts_with("-") {
                 word.push(affix.to_owned().replace("-", ""));
             }
