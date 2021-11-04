@@ -1,0 +1,22 @@
+{
+	"consonants": [
+		"p", "b", "m", "f", "v", "t", "n", "r", "ð", "s", "ʃ", "l", "k", "x", "h"
+	],
+	"onsets": [
+		"@"
+	],
+	"codas": [
+		"r", "l", "n", "s"
+	],
+	"vowels": [
+		"ɪ", "i", "o", "ə", "ɑ"
+	],
+	"stressed": -2,
+	"romanization": {
+		"ɪ": "i", "i": "e", "ə": "u", "ɑ": "a", "ð": "th", "ʃ": "sh", "x": "ch"
+	},
+	"structures": [
+		"cvc", "vc", "v"
+	],
+	"max_syllable_count": 4
+}

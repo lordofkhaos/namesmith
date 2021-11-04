@@ -40,7 +40,7 @@ fn debug(message: &str) {
 /// # Returns
 /// 
 /// `bool` - Whether the program should continue running
-fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String) -> bool{
+fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String, affixes: &mut Vec<String>) -> bool {
     if args.len() > 1 {
         if args.contains(&"-h".to_string()) {
             println!("Usage: ./namesmith [-n <word_count>] [-d] [-p <path>]");
@@ -62,6 +62,12 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
         if args.contains(&"-p".to_string()) {
             let index = args.iter().position(|x| x == "-p").unwrap();
             *path = args[index + 1].clone();
+        }
+
+        if args.contains(&"-a".to_string()) {
+            let index = args.iter().position(|x| x == "-a").unwrap();
+            *affixes = args[index + 1].clone().replace("\"", "").replace("'", "").split(",").map(|x| x.to_string()).collect();
+            debug(&format!("Affixes: {:?}", affixes));
         }
     }
 
@@ -172,7 +178,7 @@ fn build_syllable(syllable: &String, config: &Config, rng: &mut rand::prelude::T
 /// # Returns
 /// 
 /// `Vec<String>` - The generated word as a Vec of Strings to account for dipthongs
-fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>) -> Vec<String> {
+fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affixes: &Vec<String>) -> Vec<String> {
     let mut word: Vec<String> = vec![];
     let mut rng = rand::thread_rng();
     let syllable_count = rng.gen_range(1..config.max_syllable_count + 1);
@@ -198,6 +204,27 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>) -> Ve
             word.push("•".to_owned());
         }
     }
+    if affixes.len() > 0 {
+        // should there be a prefix?
+        let prefixed = rng.gen_bool(0.5);
+        // should there be a suffix?
+        let suffixed = rng.gen_bool(0.5);
+
+        if prefixed {
+            // choose a random affix or none
+            let affix = affixes.choose(&mut rng).unwrap();
+            if affix.starts_with("+") && prefixed {
+                word.insert(0, affix.to_owned().replace("+", ""));
+            }
+        } else if suffixed {
+            // choose a random affix or none
+            let affix = affixes.choose(&mut rng).unwrap();
+            if affix.starts_with("-") {
+                word.push(affix.to_owned().replace("-", ""));
+            }
+        }
+    }
+    
     word
 }
 
@@ -254,7 +281,8 @@ fn main() {
     // very basic launch argument handling
     let args: Vec<String> = env::args().collect();
     let mut path = String::new();
-    if !handle_launch_args(args, &mut word_count, &mut path) {
+    let mut affixes: Vec<String> = vec![];
+    if !handle_launch_args(args, &mut word_count, &mut path, &mut affixes) {
         return;
     }
 
@@ -262,7 +290,7 @@ fn main() {
 
     // for each word
     for _ in 0..word_count {
-        let word = create_word(&config, &onsets, &codas);
+        let word = create_word(&config, &onsets, &codas, &affixes);
         // join the word
         let (ipa_word, romanized_word) = create_final_str(word, &config);
         // print romanized word
