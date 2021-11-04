@@ -150,15 +150,19 @@ fn handle_config(mut path: String) -> (Config, Vec<String>, Vec<String>) {
 /// // Will generate a random syllable
 /// generate_syllable(syllable_out, &config, &mut rng, &word, 0, &onsets, &codas);
 /// ```
-fn build_syllable(syllable: &String, config: &Config, rng: &mut ThreadRng, word: &mut Vec<String>, vowel_index: usize, onsets: &Vec<String>, codas: &Vec<String>) {
-    for index in 0..syllable.chars().count() {
+fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word: &mut Vec<String>, onsets: &Vec<String>, codas: &Vec<String>) {
+    let mut syllable: Vec<String> = vec![];
+    // find the location of the vowel in the syllable
+    let vowel_index = structure.to_lowercase().find("v").unwrap();
+    // for each character in the syllable structure
+    for index in 0..structure.len() {
         // if the letter is a vowel
-        if syllable.chars().nth(index).unwrap() == 'v' {
+        if structure.chars().nth(index).unwrap() == 'v' {
             // choose a random vowel
             let vowel = config.vowels.choose(rng).unwrap().to_owned();
             debug!("vowel:\t{}", vowel);
 
-            word.push(vowel.to_string());
+            syllable.push(vowel.to_string());
         }
         else {
             debug!("index:\t{}", index);
@@ -169,15 +173,23 @@ fn build_syllable(syllable: &String, config: &Config, rng: &mut ThreadRng, word:
                 let onset = onsets.choose(rng).unwrap();
                 debug!("onset:\t{}", onset);
 
-                word.push(onset.to_string());
+                // insert the chosen onset before the vowel
+                if syllable.len() == 0 {
+                    syllable.push(onset.to_string());
+                }
+                else {
+                    syllable.insert(0, onset.to_string());
+                }
             }
             else {
                 // choose a random coda
                 let coda = codas.choose(rng).unwrap();
                 debug!("coda:\t{}", coda);
-                word.push(coda.to_string());
+                syllable.push(coda.to_string());
             }
         }
+
+        word.append(&mut syllable);
     }
 }
 
@@ -209,12 +221,8 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
         let syllable = config.structures.choose(&mut rng).unwrap();
         debug!("syllable:\t{}", syllable);
 
-        // find location of 'v' in syllable
-        let vowel_index = syllable.find('v').unwrap();
-        debug!("vowel_index:\t{}", vowel_index);
-
         // for each letter in the syllable
-        build_syllable(syllable, config, &mut rng, &mut word, vowel_index, onsets, codas);
+        build_syllable(syllable, config, &mut rng, &mut word, onsets, codas);
 
         // unless it's the last syllable, add a syllable marker
         if i != syllable_count - 1 {
