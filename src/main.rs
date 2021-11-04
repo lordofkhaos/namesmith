@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use rand::Rng;
-use rand::seq::SliceRandom;
+use rand::{Rng, prelude::ThreadRng, seq::SliceRandom};
 use serde::Deserialize;
 
 static mut DEBUG: bool = false;
@@ -134,7 +133,7 @@ fn handle_config(mut path: String) -> (Config, Vec<String>, Vec<String>) {
 /// // Will generate a random syllable
 /// generate_syllable(syllable_out, &config, &mut rng, &word, 0, &onsets, &codas);
 /// ```
-fn build_syllable(syllable: &String, config: &Config, rng: &mut rand::prelude::ThreadRng, word: &mut Vec<String>, vowel_index: usize, onsets: &Vec<String>, codas: &Vec<String>) {
+fn build_syllable(syllable: &String, config: &Config, rng: &mut ThreadRng, word: &mut Vec<String>, vowel_index: usize, onsets: &Vec<String>, codas: &Vec<String>) {
     for index in 0..syllable.chars().count() {
         // if the letter is a vowel
         if syllable.chars().nth(index).unwrap() == 'v' {
@@ -183,6 +182,7 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
     let mut rng = rand::thread_rng();
     let syllable_count = rng.gen_range(1..config.max_syllable_count + 1);
     debug(&("syllable_count:\t".to_owned() + &syllable_count.to_string()));
+    // build the syllables
     for i in 0..syllable_count {
         // indicate syllable is stressed
         if i == config.stressed || i == syllable_count - (config.stressed * -1) || syllable_count == 1 {
