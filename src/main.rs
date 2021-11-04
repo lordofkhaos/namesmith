@@ -43,7 +43,7 @@ macro_rules! debug {
 fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String, affixes: &mut Vec<String>) -> bool {
     if args.len() > 1 {
         // help message
-        if args.contains(&"-h".to_string()) {
+        if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
             println!("Usage: ./namesmith [-n <word_count>] [-d] [-p <path>]");
             println!("\t-n\tnumber of words to generate");
             println!("\t-d\tenable debug mode");
@@ -55,33 +55,33 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
         }
 
         // number of words to generate
-        if args.contains(&"-n".to_string()) {
+        if args.contains(&"-n".to_string()) || args.contains(&"--number".to_string()) {
             let index = args.iter().position(|x| x == "-n").unwrap();
             *word_count = args[index + 1].parse::<i32>().unwrap();
         }
 
         // enable debug mode
-        if args.contains(&"-d".to_string()) {
+        if args.contains(&"-d".to_string()) || args.contains(&"--debug".to_string()) {
             unsafe {
                 DEBUG = true;
             }
         }
 
         // path to config file
-        if args.contains(&"-p".to_string()) {
+        if args.contains(&"-p".to_string()) || args.contains(&"--path".to_string()) {
             let index = args.iter().position(|x| x == "-p").unwrap();
             *path = args[index + 1].clone();
         }
 
         // affixes
-        if args.contains(&"-a".to_string()) {
+        if args.contains(&"-a".to_string()) || args.contains(&"--affixes".to_string()) {
             let index = args.iter().position(|x| x == "-a").unwrap();
             *affixes = args[index + 1].clone().replace("\"", "").replace("'", "").split(",").map(|x| x.to_string()).collect();
             debug!("Affixes: {:?}", affixes);
         }
 
         // version
-        if args.contains(&"-v".to_string()) {
+        if args.contains(&"-v".to_string()) || args.contains(&"--version".to_string()) {
             println!("namesmith v{}", env!("CARGO_PKG_VERSION"));
             return false;
         }
