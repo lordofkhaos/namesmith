@@ -41,32 +41,48 @@ fn debug(message: &str) {
 /// `bool` - Whether the program should continue running
 fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String, affixes: &mut Vec<String>) -> bool {
     if args.len() > 1 {
+        // help message
         if args.contains(&"-h".to_string()) {
             println!("Usage: ./namesmith [-n <word_count>] [-d] [-p <path>]");
             println!("\t-n\tnumber of words to generate");
             println!("\t-d\tenable debug mode");
             println!("\t-p\tpath to config file");
+            println!("\t-a\ta list of affixed syllables in IPA");
+            println!("\t-v\tdisplay the current version");
             println!("\t-h\tdisplay this help message");
             return false;
         }
+
+        // number of words to generate
         if args.contains(&"-n".to_string()) {
             let index = args.iter().position(|x| x == "-n").unwrap();
             *word_count = args[index + 1].parse::<i32>().unwrap();
         }
+
+        // enable debug mode
         if args.contains(&"-d".to_string()) {
             unsafe {
                 DEBUG = true;
             }
         }
+
+        // path to config file
         if args.contains(&"-p".to_string()) {
             let index = args.iter().position(|x| x == "-p").unwrap();
             *path = args[index + 1].clone();
         }
 
+        // affixes
         if args.contains(&"-a".to_string()) {
             let index = args.iter().position(|x| x == "-a").unwrap();
             *affixes = args[index + 1].clone().replace("\"", "").replace("'", "").split(",").map(|x| x.to_string()).collect();
             debug(&format!("Affixes: {:?}", affixes));
+        }
+
+        // version
+        if args.contains(&"-v".to_string()) {
+            println!("namesmith v{}", env!("CARGO_PKG_VERSION"));
+            return false;
         }
     }
 
