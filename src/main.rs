@@ -215,7 +215,10 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>) -> Ve
 fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
     let ipa_word = word.join("");
     let mut clone = ipa_word.clone();
-    for (key, value) in config.romanization.iter() {
+    // sort the hashmap by length of the key
+    let mut sorted_map: Vec<(&String, &String)> = config.romanization.iter().collect();
+    sorted_map.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    for (key, value) in sorted_map {
         // replace the key with the value
         clone = clone.replace(key, value);
     }
