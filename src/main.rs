@@ -261,6 +261,18 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
     word
 }
 
+fn sort_romanization(map: &mut Vec<(&String, &String)>) {
+    // sort map in reverse by the zeroth value
+    // if the zeroth value of the first is the same as the 1th of the second, put the first before the second
+    map.sort_by(|a, b| {
+        if a.0 == b.0 {
+            a.1.cmp(&b.1)
+        } else {
+            a.0.cmp(&b.0)
+        }
+    });
+}
+
 /// Builds the output string from the raw word and romanized version
 /// 
 /// # Arguments
@@ -277,7 +289,7 @@ fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
     let mut clone = ipa_word.clone();
     // sort the hashmap by length of the key
     let mut sorted_map: Vec<(&String, &String)> = config.romanization.iter().collect();
-    sorted_map.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    sort_romanization(&mut sorted_map);
     for (key, value) in sorted_map {
         // replace the key with the value
         clone = clone.replace(key, value);
