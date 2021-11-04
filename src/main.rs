@@ -16,12 +16,13 @@ static mut DEBUG: bool = false;
 /// 
 /// ```
 /// // Will only print with debug mode enabled
-/// debug("Hello world!");
+/// debug!("Hello world!");
 /// ```
-fn debug(message: &str) {
-    unsafe {
-        if DEBUG {
-            println!("[DEBUG]\t{}", message);
+macro_rules! debug {
+    ($($arg:tt)*) => {
+        if unsafe { DEBUG } {
+            eprint!("[DEBUG]   ");
+            eprintln!($($arg)*);
         }
     }
 }
@@ -76,7 +77,7 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
         if args.contains(&"-a".to_string()) {
             let index = args.iter().position(|x| x == "-a").unwrap();
             *affixes = args[index + 1].clone().replace("\"", "").replace("'", "").split(",").map(|x| x.to_string()).collect();
-            debug(&format!("Affixes: {:?}", affixes));
+            debug!("Affixes: {:?}", affixes);
         }
 
         // version
@@ -155,25 +156,25 @@ fn build_syllable(syllable: &String, config: &Config, rng: &mut ThreadRng, word:
         if syllable.chars().nth(index).unwrap() == 'v' {
             // choose a random vowel
             let vowel = config.vowels.choose(rng).unwrap().to_owned();
-            debug(&("vowel:\t".to_owned() + &vowel.to_string()));
+            debug!("vowel:\t{}", vowel);
 
             word.push(vowel.to_string());
         }
         else {
-            debug(&("index:\t".to_owned() + &index.to_string()));
+            debug!("index:\t{}", index);
 
             // if before v:
             if index < vowel_index {
                 // choose a random onset
                 let onset = onsets.choose(rng).unwrap();
-                debug(&("onset:\t".to_owned() + &onset.to_string()));
+                debug!("onset:\t{}", onset);
 
                 word.push(onset.to_string());
             }
             else {
                 // choose a random coda
                 let coda = codas.choose(rng).unwrap();
-                debug(&("coda:\t".to_owned() + &coda.to_string()));
+                debug!("coda:\t{}", coda);
                 word.push(coda.to_string());
             }
         }
@@ -197,7 +198,7 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
     let mut word: Vec<String> = vec![];
     let mut rng = rand::thread_rng();
     let syllable_count = rng.gen_range(1..config.max_syllable_count + 1);
-    debug(&("syllable_count:\t".to_owned() + &syllable_count.to_string()));
+    debug!("syllable_count:\t{}", syllable_count);
     // build the syllables
     for i in 0..syllable_count {
         // indicate syllable is stressed
@@ -206,11 +207,11 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
         }
         // choose a syllable
         let syllable = config.structures.choose(&mut rng).unwrap();
-        debug(&("syllable:\t".to_owned() + &syllable.to_string()));
+        debug!("syllable:\t{}", syllable);
 
         // find location of 'v' in syllable
         let vowel_index = syllable.find('v').unwrap();
-        debug(&("vowel_index:\t".to_owned() + &vowel_index.to_string()));
+        debug!("vowel_index:\t{}", vowel_index);
 
         // for each letter in the syllable
         build_syllable(syllable, config, &mut rng, &mut word, vowel_index, onsets, codas);
@@ -301,7 +302,7 @@ struct Config {
 fn main() {
     // number of words to generate
     let mut word_count = 5;
-    debug(&("word_count:\t".to_owned() + &word_count.to_string()));
+    debug!("word_count:\t{}", word_count);
     // very basic launch argument handling
     let args: Vec<String> = env::args().collect();
     let mut path = String::new();
