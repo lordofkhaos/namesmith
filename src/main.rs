@@ -122,6 +122,10 @@ fn handle_config(mut path: String) -> (Config, Vec<String>, Vec<String>) {
     (config, codas, onsets)
 }
 
+fn wrap_sound(sound: String) -> String {
+    format!("[{}]", sound)
+}
+
 /// Generates a random syllable
 /// 
 /// # Arguments
@@ -162,7 +166,7 @@ fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word
             let vowel = config.vowels.choose(rng).unwrap().to_owned();
             debug!("vowel:\t{}", vowel);
 
-            syllable.push(vowel.to_string());
+            syllable.push(wrap_sound(vowel.to_string()));
         }
         else {
             debug!("index:\t{}", index);
@@ -175,17 +179,17 @@ fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word
 
                 // insert the chosen onset before the vowel
                 if syllable.len() == 0 {
-                    syllable.push(onset.to_string());
+                    syllable.push(wrap_sound(onset.to_string()));
                 }
                 else {
-                    syllable.insert(0, onset.to_string());
+                    syllable.insert(0, wrap_sound(onset.to_string()));
                 }
             }
             else {
                 // choose a random coda
                 let coda = codas.choose(rng).unwrap();
                 debug!("coda:\t{}", coda);
-                syllable.push(coda.to_string());
+                syllable.push(wrap_sound(coda.to_string()));
             }
         }
 
@@ -261,18 +265,6 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
     word
 }
 
-fn sort_romanization(map: &mut Vec<(&String, &String)>) {
-    // sort map in reverse by the zeroth value
-    // if the zeroth value of the first is the same as the 1th of the second, put the first before the second
-    map.sort_by(|a, b| {
-        if a.0 == b.0 {
-            a.1.cmp(&b.1)
-        } else {
-            a.0.cmp(&b.0)
-        }
-    });
-}
-
 /// Builds the output string from the raw word and romanized version
 /// 
 /// # Arguments
@@ -288,14 +280,12 @@ fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
     let ipa_word = word.join("");
     let mut clone = ipa_word.clone();
     // sort the hashmap by length of the key
-    let mut sorted_map: Vec<(&String, &String)> = config.romanization.iter().collect();
-    sort_romanization(&mut sorted_map);
-    for (key, value) in sorted_map {
+    for (key, value) in config.romanization.iter() {
         // replace the key with the value
-        clone = clone.replace(key, value);
+        clone = clone.replace(format!("[{}]", key).as_str(), value);
     }
-    let romanized_word = clone.replace("'", "").replace("•", "");
-    (ipa_word, romanized_word)
+    let romanized_word = clone.replace("'", "").replace("•", "").replace("[", "").replace("]", "");
+    (ipa_word.replace("[", "").replace("]", ""), romanized_word)
 }
 
 #[derive(Deserialize, Debug)]

@@ -13,7 +13,7 @@
 	],
 	"stressed": -2,
 	"romanization": {
-		"ɪ": "i", "i": "e", "ə": "u", "ɑ": "a", "ð": "th", "ʃ": "sh", "x": "ch"
+		"ɪ": "i", "i": "e", "ə": "u", "ɑ": "a", "ð": "th", "ʃ": "sh", "x": "ch", "k": "c"
 	},
 	"structures": [
 		"cvc", "vc", "v"
