@@ -233,11 +233,26 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
             word.push("•".to_owned());
         }
     }
+    debug!("#### AFFIXES ####");
+    debug!("affixes.len():\t{}", affixes.len());
     if affixes.len() > 0 {
-        // should there be a prefix?
-        let prefixed = rng.gen_bool(0.5);
-        // should there be a suffix?
-        let suffixed = rng.gen_bool(0.5);
+        let mut prefixed = false;
+        let mut suffixed = false;
+        // if there are any affixes applied, there should always be one
+        if !prefixed && !suffixed {
+            // if there is only one kind of affix, it should be applied
+            if affixes.iter().all(|x| x.starts_with("+")) && !affixes.iter().all(|x| x.starts_with("-")) {
+                prefixed = true;
+            } else if !affixes.iter().all(|x| x.starts_with("+")) && affixes.iter().all(|x| x.starts_with("-")) {
+                suffixed = true;
+            } else {
+                // if there are both, choose one
+                prefixed = rng.gen_bool(0.5);
+                suffixed = !prefixed;
+            }
+        }
+        debug!("prefixed:\t{}", prefixed);
+        debug!("suffixed:\t{}", suffixed);
 
         if prefixed {
             // choose a random affix or none
@@ -275,7 +290,7 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
 /// 
 /// # Returns
 /// 
-/// (`String`, `String) - The final ipa string and romanized string
+/// (`String`, `String`) - The final ipa string and romanized string
 fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
     let ipa_word = word.join("");
     let mut clone = ipa_word.clone();
@@ -284,8 +299,8 @@ fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
         // replace the key with the value
         clone = clone.replace(format!("[{}]", key).as_str(), value);
     }
-    let romanized_word = clone.replace("'", "").replace("•", "").replace("[", "").replace("]", "");
-    (ipa_word.replace("[", "").replace("]", ""), romanized_word)
+    let romanized_word = clone.replace("'", "").replace("•", ""); //.replace("[", "").replace("]", "");
+    (ipa_word.replace("[", "").replace("]", ""), romanized_word.replace("[", "").replace("]", ""))
 }
 
 #[derive(Deserialize, Debug)]
