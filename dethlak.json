@@ -1,0 +1,22 @@
+{
+	"consonants": [
+		"d", "θ", "s", "k", "tʃ", "r", "j", "m", "n", "t", "z", "g", "h"
+	],
+	"onsets": [
+		"d", "θ", "s", "k", "j", "h"
+	],
+	"codas": [
+		"s", "k", "tʃ", "r", "m", "n", "t", "z", "g", "h"
+	],
+	"vowels": [
+		"ɪ", "i", "ɑ", "e", "aɪ", "eɪ"
+	],
+	"stressed": -2,
+	"romanization": {
+		"θ": "th", "tʃ": "c", "i": "ie", "aɪ": "ai", "eɪ": "ae", "ɪ": "i", "ɑ": "a"
+	},
+	"structures": [
+		"cvc", "cv", "v"
+	],
+	"max_syllable_count": 3
+}
