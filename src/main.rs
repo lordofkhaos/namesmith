@@ -85,6 +85,9 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
             println!("namesmith v{}", env!("CARGO_PKG_VERSION"));
             return false;
         }
+    } else {
+        println!("Usage: ./namesmith [-n <word_count>] [-d] [-p <path>]");
+        return false;
     }
 
     return true;
@@ -107,9 +110,24 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
 /// let (cfg, onsets, codas) = handle_config_file("config.json");
 /// ```
 fn handle_config(mut path: String) -> (Config, Vec<String>, Vec<String>) {
-    if path == String::new() {
-        path = "./english.json".to_owned();
+    path = path.trim().to_string();
+    debug!("path:\t{}", path);
+    // first, test to see if the file exists
+    // if the file does not exist, return empty objects to keep a happy system
+    if !Path::new(&path).exists() {
+        let _c = Config {
+            consonants: vec![],
+            onsets: vec![],
+            codas: vec![],
+            vowels: vec![],
+            stressed: 0,
+            romanization: HashMap::new(),
+            structures: vec![],
+            max_syllable_count: 0,
+        };
+        return (_c, vec![], vec![]);
     }
+
     let config: Config = serde_json::from_reader(File::open(&path).unwrap()).unwrap();
     let mut codas = config.codas.clone();
     let mut onsets = config.onsets.clone();
@@ -322,6 +340,11 @@ fn main() {
     }
 
     let (config, codas, onsets) = handle_config(path);
+    // if the config file is empty, yell at end user and exit
+    if config.consonants.len() == 0 || config.vowels.len() == 0 {
+        println!("Error: Config file is empty or does not exist");
+        return;
+    }
 
     // for each word
     for _ in 0..word_count {
