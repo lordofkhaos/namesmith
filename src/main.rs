@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 use std::env;
 use std::fs::File;
 use rand::{Rng, prelude::ThreadRng, seq::SliceRandom};
@@ -226,11 +226,11 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
         debug!("syllable:\t{}", syllable);
 
         // for each letter in the syllable
-        build_syllable(syllable, config, &mut rng, &mut word, onsets, codas);
+        build_syllable(&syllable.to_lowercase(), config, &mut rng, &mut word, onsets, codas);
 
         // unless it's the last syllable, add a syllable marker
         if i != syllable_count - 1 {
-            word.push("•".to_owned());
+            word.push(" ".to_owned());
         }
     }
     if affixes.len() > 0 {
@@ -245,14 +245,14 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
             if affix.starts_with("+") && prefixed {
                 word.insert(0, affix.to_owned().replace("+", ""));
                 // add a syllable marker
-                word.insert(1, "•".to_owned());
+                word.insert(1, " ".to_owned());
             }
         } else if suffixed {
             // choose a random suffix or none
             let affix = affixes.choose(&mut rng).unwrap();
             // make sure there's a syllable marker
-            if word[word.len() - 1] != "•" {
-                word.push("•".to_owned());
+            if word[word.len() - 1] != " " {
+                word.push(" ".to_owned());
             }
 
             // add the affix
@@ -284,8 +284,8 @@ fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
         // replace the key with the value
         clone = clone.replace(format!("[{}]", key).as_str(), value);
     }
-    let romanized_word = clone.replace("'", "").replace("•", "").replace("[", "").replace("]", "");
-    (ipa_word.replace("[", "").replace("]", ""), romanized_word)
+    let romanized_word = clone.replace("'", "").replace(" ", ""); //.replace("[", "").replace("]", "");
+    (ipa_word.replace("[", "").replace("]", ""), romanized_word.replace("[", "").replace("]", ""))
 }
 
 #[derive(Deserialize, Debug)]
@@ -329,6 +329,6 @@ fn main() {
         // join the word
         let (ipa_word, romanized_word) = create_final_str(word, &config);
         // print romanized word
-        println!("{} ({})", romanized_word, ipa_word);
+        println!("{} /{}/", romanized_word, ipa_word);
     }
 }
