@@ -6,6 +6,8 @@ use serde::Deserialize;
 
 static mut DEBUG: bool = false;
 
+// TODO: improve performance by pre-generating all possible syllables in a file, only updating them when the config file changes
+
 /// Prints a debug message if the program is in debug mode
 /// 
 /// # Arguments
@@ -44,11 +46,11 @@ fn handle_launch_args(args: Vec<String>, word_count: &mut i32, path: &mut String
     if args.len() > 1 {
         // help message
         if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
-            println!("Usage: ./namesmith [-n <word_count>] [-d] [-p <path>]");
+            println!("Usage: ./namesmith [-n <num_of_words>] [-d] [-p <path>]");
             println!("\t-n\tnumber of words to generate");
             println!("\t-d\tenable debug mode");
             println!("\t-p\tpath to config file");
-            println!("\t-a\ta list of affixed syllables in IPA");
+            println!("\t-a\ta list of affixed syllables in as phonemes (e.g. \"-ən,+pri\")");
             println!("\t-v\tdisplay the current version");
             println!("\t-h\tdisplay this help message");
             return false;
@@ -148,7 +150,7 @@ fn wrap_sound(sound: String) -> String {
 /// 
 /// # Arguments
 /// 
-/// * `syllable` - The syllable to generate
+/// * `structure` - The structure of the syllable (e.g. "cvc")
 /// 
 /// * `config` - The configuration loaded from the config file
 /// 
@@ -170,7 +172,7 @@ fn wrap_sound(sound: String) -> String {
 /// 
 /// ```
 /// // Will generate a random syllable
-/// generate_syllable(syllable_out, &config, &mut rng, &word, 0, &onsets, &codas);
+/// build_syllable(syllable_out, &config, &mut rng, &word, 0, &onsets, &codas);
 /// ```
 fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word: &mut Vec<String>, onsets: &Vec<String>, codas: &Vec<String>) {
     let mut syllable: Vec<String> = vec![];
@@ -178,6 +180,7 @@ fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word
     let vowel_index = structure.to_lowercase().find("v").unwrap();
     // for each character in the syllable structure
     for index in 0..structure.len() {
+        debug!("index:\t{}\tsyllable:\t{:?}", index, syllable);
         // if the letter is a vowel
         if structure.chars().nth(index).unwrap() == 'v' {
             // choose a random vowel
@@ -211,8 +214,9 @@ fn build_syllable(structure: &String, config: &Config, rng: &mut ThreadRng, word
             }
         }
 
-        word.append(&mut syllable);
+        debug!("syllable:\t{}", syllable.concat());
     }
+    word.push(syllable.concat());
 }
 
 /// Generates a word from multiple or one syllables
@@ -240,11 +244,11 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
             word.push("'".to_owned());
         }
         // choose a syllable
-        let syllable = config.structures.choose(&mut rng).unwrap();
-        debug!("syllable:\t{}", syllable);
+        let syllable_structure = config.structures.choose(&mut rng).unwrap();
+        debug!("structure:\t{}", syllable_structure);
 
         // for each letter in the syllable
-        build_syllable(&syllable.to_lowercase(), config, &mut rng, &mut word, onsets, codas);
+        build_syllable(&syllable_structure.to_lowercase(), config, &mut rng, &mut word, onsets, codas);
 
         // unless it's the last syllable, add a syllable marker
         if i != syllable_count - 1 {
@@ -252,31 +256,157 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
         }
     }
     if affixes.len() > 0 {
-        // should there be a prefix?
-        let prefixed = rng.gen_bool(0.5);
-        // should there be a suffix?
-        let suffixed = rng.gen_bool(0.5);
+        let mut prefixed = false;
+        let mut suffixed = false;
+        for affix in affixes {
+            if affix.starts_with("+") {
+                prefixed = true;
+            } else if affix.starts_with("-") {
+                suffixed = true;
+            }
+
+            if prefixed && suffixed {
+                break; // no need to go any further
+            }
+        }
 
         if prefixed {
-            // choose a random affix or none
-            let affix = affixes.choose(&mut rng).unwrap();
-            if affix.starts_with("+") && prefixed {
-                word.insert(0, affix.to_owned().replace("+", ""));
-                // add a syllable marker
-                word.insert(1, " ".to_owned());
+            let mut copy = affixes.to_vec();
+            let mut real_affix = "".to_owned();
+            // choose a random suffix
+            let mut affix = "".to_owned();
+            while !affix.starts_with("+") {
+                affix = copy.choose(&mut rng).unwrap().to_owned();
+                // remove the chosen affix from the list
+                debug!("PREFIX: ----- affix: '{}'", affix);
+                let index = copy.iter().position(|x| x == &affix).unwrap();
+                debug!("index: {}, copy.length(): {}", index, copy.len());
+                copy.remove(index);
+                
             }
-        } else if suffixed {
-            // choose a random suffix or none
-            let affix = affixes.choose(&mut rng).unwrap();
+            affix = affix.replace("+", "");
+            debug!("--- affix chars: \"{}\"", affix.split("").collect::<Vec<&str>>().join("   "));
+            let mut temp: Vec<u32> = vec![];
+            for c in affix.chars() {
+                temp.push(c as u32);
+            }
+            debug!("--- affix chars: \"{}\"", temp.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join("   "));
+
+
+            for (i, c) in affix.chars().enumerate() {
+                // check if this is a diphthong:
+                // proper error handling:
+                let res = affix.chars().nth(i + 1);
+                match res {
+                    // within the bounds of the affix
+                    Some(x) => {
+                        // if the next character is a tie bar, the next three characters form a diphthong
+                        if x as u32 == 865 { // check for a tie bar
+                            debug!("---- tie bar found, adding [");
+                            real_affix.push_str(&format!("[{}", c));
+                            continue;
+                        }
+
+                        if c as u32 == 865 { // check for a tie bar
+                            debug!("---- tie bar found, adding tie bar");
+                            real_affix.push(c);
+                            continue;
+                        }
+
+                        // else, it's not a diphthong
+                        real_affix.push_str(&format!("[{}]", c));
+                    },
+                    None => {
+
+                        if i != 0 {
+                            // if the character before this one was a tie bar, this character and the two previous form a diphthong
+                            if affix.chars().nth(i - 1).unwrap() as u32 == 865 { // check for a tie bar
+                                debug!("---- tie bar found, adding ]");
+                                real_affix.push_str(&format!("{}]", c));
+                                continue;
+                            }
+                        }
+
+                        // else, it's not a diphthong
+                        real_affix.push_str(&format!("[{}]", c));
+                    }
+                }
+                
+            }
+
+            word.insert(0, real_affix.replace("+", ""));
+            // add a syllable marker
+            word.insert(1, " ".to_owned());
+        } 
+        if suffixed {
+            let mut copy = affixes.to_vec();
+            let mut real_affix = "".to_owned();
+            // choose a random suffix
+            let mut affix = "".to_owned();
+            while !affix.starts_with("-") {
+                affix = copy.choose(&mut rng).unwrap().to_owned();
+                debug!("SUFFIX: ----- affix: {}", affix);
+                let index = copy.iter().position(|x| x == &affix).unwrap();
+                debug!("index: {}, copy.length(): {}", index, copy.len());
+                copy.remove(index);
+            }
+            affix = affix.replace("-", "");
+            debug!("---- affix chars: \"{}\"", affix.split("").collect::<Vec<&str>>().join("   "));
+            let mut temp: Vec<u32> = vec![];
+            for c in affix.chars() {
+                temp.push(c as u32);
+            }
+            debug!("---- affix chars: \"{}\"", temp.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join("   "));
+
+
+            for (i, c) in affix.chars().enumerate() {
+                // check if this is a diphthong:
+                // proper error handling:
+                let res = affix.chars().nth(i + 1);
+                match res {
+                    // within the bounds of the affix
+                    Some(x) => {
+                        // if the next character is a tie bar, the next three characters form a diphthong
+                        if x as u32 == 865 { // check for a tie bar
+                            debug!("---- tie bar found, adding [");
+                            real_affix.push_str(&format!("[{}", c));
+                            continue;
+                        }
+
+                        if c as u32 == 865 { // check for a tie bar
+                            debug!("---- tie bar found, adding tie bar");
+                            real_affix.push(c);
+                            continue;
+                        }
+
+                        // else, it's not a diphthong
+                        real_affix.push_str(&format!("[{}]", c));
+                    },
+                    None => {
+
+                        if i != 0 {
+                            // if the character before this one was a tie bar, this character and the two previous form a diphthong
+                            if affix.chars().nth(i - 1).unwrap() as u32 == 865 { // check for a tie bar
+                                debug!("---- tie bar found, adding ]");
+                                real_affix.push_str(&format!("{}]", c));
+                                continue;
+                            }
+                        }
+
+                        // else, it's not a diphthong
+                        real_affix.push_str(&format!("[{}]", c));
+                    }
+                }
+                
+            }
+
             // make sure there's a syllable marker
             if word[word.len() - 1] != " " {
                 word.push(" ".to_owned());
             }
 
             // add the affix
-            if affix.starts_with("-") {
-                word.push(affix.to_owned().replace("-", ""));
-            }
+            word.push(real_affix.replace("-", ""));
         }
     }
     
@@ -295,6 +425,7 @@ fn create_word(config: &Config, onsets: &Vec<String>, codas: &Vec<String>, affix
 /// 
 /// (`String`, `String) - The final ipa string and romanized string
 fn create_final_str(word: Vec<String>, config: &Config) -> (String, String) {
+    debug!("-- word: {:?}", word);
     let ipa_word = word.join("");
     let mut clone = ipa_word.clone();
     // sort the hashmap by length of the key
